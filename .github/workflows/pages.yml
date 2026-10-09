@@ -7,9 +7,7 @@ on:
     types:
       - completed
     branches:
-      - main
       - feature/exec
-  workflow_dispatch: # temporary for manual testing; remove when satisfied
 
 permissions:
   actions: read
@@ -42,7 +40,7 @@ jobs:
       # ----------------------------------------------------------------------
       - name: Download Darwin AMD64
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: darwin-amd64
           path: packages/docs/public/bin/darwin/amd64
@@ -51,7 +49,7 @@ jobs:
 
       - name: Download Darwin ARM64
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: darwin-arm64
           path: packages/docs/public/bin/darwin/arm64
@@ -60,7 +58,7 @@ jobs:
 
       - name: Download Linux AMD64
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: linux-amd64
           path: packages/docs/public/bin/linux/amd64
@@ -69,7 +67,7 @@ jobs:
 
       - name: Download Linux ARM64
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: linux-arm64
           path: packages/docs/public/bin/linux/arm64
@@ -78,7 +76,7 @@ jobs:
 
       - name: Download Windows AMD64
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: windows-amd64
           path: packages/docs/public/bin/windows/amd64
@@ -87,7 +85,7 @@ jobs:
 
       - name: Download Windows ARM64
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: windows-arm64
           path: packages/docs/public/bin/windows/arm64
