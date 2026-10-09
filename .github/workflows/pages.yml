@@ -7,6 +7,7 @@ on:
     types:
       - completed
     branches:
+      - main
       - feature/exec
   workflow_dispatch: # temporary for manual testing; remove when satisfied
 
@@ -16,95 +17,114 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # ----------------------------------------------------------------------
+      # Checkout the repository at the SHA that triggered the Build workflow
+      # ----------------------------------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
+      # ----------------------------------------------------------------------
       # Download artefacts produced by the Build workflow
+      # ----------------------------------------------------------------------
       - name: Download Darwin AMD64
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v5
         with:
           name: darwin-amd64
-          path: dist/assets/darwin/amd64
+          path: packages/docs/public/bin/darwin/amd64
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Darwin ARM64
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v5
         with:
           name: darwin-arm64
-          path: dist/assets/darwin/arm64
+          path: packages/docs/public/bin/darwin/arm64
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Linux AMD64
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v5
         with:
           name: linux-amd64
-          path: dist/assets/linux/amd64
+          path: packages/docs/public/bin/linux/amd64
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Linux ARM64
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v5
         with:
           name: linux-arm64
-          path: dist/assets/linux/arm64
+          path: packages/docs/public/bin/linux/arm64
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Windows AMD64
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v5
         with:
           name: windows-amd64
-          path: dist/assets/windows/amd64
+          path: packages/docs/public/bin/windows/amd64
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Windows ARM64
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v5
         with:
           name: windows-arm64
-          path: dist/assets/windows/arm64
+          path: packages/docs/public/bin/windows/arm64
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build the documentation from packages/docs
-      - name: Build Docs
-        run: |
-          mkdir -p docs
-          # Replace the line below with your actual documentation build command.
-          # Example: make -C packages docs
-          # For now we simply copy the source files as a placeholder.
-          cp -R packages/docs/* docs/
-          # Ensure an index.html exists (GitHub Pages requires it).
-          if [ ! -f docs/index.html ]; then
-            cat > docs/index.html <<'EOF'
-            <!DOCTYPE html>
-            <html lang="en"><head><meta charset="UTF-8"><title>Safe Docs</title></head>
-            <body><h1>Documentation placeholder</h1></body></html>
-            EOF
-          fi
+      # ----------------------------------------------------------------------
+      # Install dependencies and build the VitePress documentation
+      # ----------------------------------------------------------------------
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
-      # Combine artefacts and docs into the final folder served by Pages
-      - name: Prepare Pages
-        run: |
-          mkdir -p docs/assets
-          cp -R dist/assets/. docs/assets/
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Setup Pages
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build VitePress
+        run: pnpm --dir packages/docs run build
+
+      # ----------------------------------------------------------------------
+      # Deploy the site to GitHub Pages
+      # ----------------------------------------------------------------------
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload Pages artifact
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./docs
+          path: packages/docs/.vitepress/dist
 
       - name: Deploy
         id: deployment
