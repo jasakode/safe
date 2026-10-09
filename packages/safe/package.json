@@ -1,0 +1,46 @@
+{
+  "name": "@jasakode/safe",
+  "version": "1.0.0",
+  "description": "Secure cryptographic library for BIP-39, key derivation, encryption, digital signatures, and signature verification.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "tsc && vitest run",
+    "dev": "tsc",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "keywords": [
+    "cryptography",
+    "crypto",
+    "bip39",
+    "mnemonic",
+    "seed",
+    "entropy",
+    "key-derivation",
+    "encryption",
+    "decryption",
+    "authenticated-encryption",
+    "digital-signature",
+    "signature-verification",
+    "ed25519",
+    "x25519",
+    "chacha20-poly1305",
+    "hkdf",
+    "typescript",
+    "security",
+    "jasakode"
+  ],
+  "author": "Jasakode",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

@@ -1,0 +1,185 @@
+name: Build
+
+on:
+  push:
+    branches:
+    - feature/exec
+  workflow_dispatch:
+
+
+jobs:
+  darwin:
+    name: Darwin ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      matrix:
+        include:
+        - arch: amd64
+          runner: macos-15-intel
+        - arch: arm64
+          runner: macos-15
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.24"
+
+    - name: Build
+      env:
+        GOOS: darwin
+        GOARCH: ${{ matrix.arch }}
+        CGO_ENABLED: "1"
+      run: |
+        mkdir -p packages/safe/bin/darwin/${GOARCH}
+
+        go build \
+          -buildmode=c-shared \
+          -o packages/safe/bin/darwin/${GOARCH}/safe.dylib \
+          ./apps/share
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: darwin-${{ matrix.arch }}
+        path: packages/safe/bin/darwin/${{ matrix.arch }}/
+
+  linux:
+    name: Linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      matrix:
+        include:
+        - arch: amd64
+          runner: ubuntu-24.04
+        - arch: arm64
+          runner: ubuntu-24.04-arm
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.24"
+
+    - name: Build
+      env:
+        GOOS: linux
+        GOARCH: ${{ matrix.arch }}
+        CGO_ENABLED: "1"
+      run: |
+        mkdir -p packages/safe/bin/linux/${GOARCH}
+
+        go build \
+          -buildmode=c-shared \
+          -o packages/safe/bin/linux/${GOARCH}/libbip0039.so \
+          ./apps/share
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-${{ matrix.arch }}
+        path: packages/safe/bin/linux/${{ matrix.arch }}/
+
+  windows:
+    name: Windows ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - arch: amd64
+          runner: windows-latest
+
+        - arch: arm64
+          runner: windows-11-vs2026-arm
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.25"
+
+    - name: Setup MSYS2 ARM64
+      if: matrix.arch == 'arm64'
+      id: msys2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: CLANGARM64
+        update: true
+        install: >-
+          mingw-w64-clang-aarch64-toolchain
+
+    - name: Build Windows AMD64
+      if: matrix.arch == 'amd64'
+      shell: bash
+      env:
+        GOOS: windows
+        GOARCH: amd64
+        CGO_ENABLED: "1"
+      run: |
+        mkdir -p packages/safe/bin/windows/amd64
+
+        go build \
+          -buildmode=c-shared \
+          -o packages/safe/bin/windows/amd64/safe.dll \
+          ./apps/share
+
+    - name: Build Windows ARM64
+      if: matrix.arch == 'arm64'
+      shell: bash
+      env:
+        GOOS: windows
+        GOARCH: arm64
+        CGO_ENABLED: "1"
+        MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+      run: |
+        echo "========== TOOLCHAIN =========="
+
+        echo "MSYS2_LOCATION=$MSYS2_LOCATION"
+
+        echo ""
+        echo "Clang:"
+        "$MSYS2_LOCATION/clangarm64/bin/clang.exe" --version
+
+        echo ""
+        echo "Target:"
+        "$MSYS2_LOCATION/clangarm64/bin/clang.exe" -print-target-triple
+
+        echo ""
+        echo "Go:"
+        go version
+
+        echo ""
+        echo "Go env:"
+        go env GOOS GOARCH GOHOSTOS GOHOSTARCH CGO_ENABLED CC CXX
+
+        echo ""
+        echo "========== BUILD =========="
+
+        mkdir -p packages/safe/bin/windows/arm64
+
+        export CC="$MSYS2_LOCATION/clangarm64/bin/clang.exe"
+        export CXX="$MSYS2_LOCATION/clangarm64/bin/clang++.exe"
+
+        go build \
+          -buildmode=c-shared \
+          -o packages/safe/bin/windows/arm64/safe.dll \
+          ./apps/share
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-${{ matrix.arch }}
+        path: packages/safe/bin/windows/${{ matrix.arch }}/
