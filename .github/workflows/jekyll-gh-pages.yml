@@ -1,0 +1,96 @@
+name: Pages
+
+on:
+  workflow_run:
+    workflows:
+      - Build
+    types:
+      - completed
+    branches:
+      - feature/exec
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download Darwin AMD64
+        uses: actions/download-artifact@v5
+        with:
+          name: darwin-amd64
+          path: dist/assets/darwin/amd64
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Darwin ARM64
+        uses: actions/download-artifact@v5
+        with:
+          name: darwin-arm64
+          path: dist/assets/darwin/arm64
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Linux AMD64
+        uses: actions/download-artifact@v5
+        with:
+          name: linux-amd64
+          path: dist/assets/linux/amd64
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Linux ARM64
+        uses: actions/download-artifact@v5
+        with:
+          name: linux-arm64
+          path: dist/assets/linux/arm64
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Windows AMD64
+        uses: actions/download-artifact@v5
+        with:
+          name: windows-amd64
+          path: dist/assets/windows/amd64
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Windows ARM64
+        uses: actions/download-artifact@v5
+        with:
+          name: windows-arm64
+          path: dist/assets/windows/arm64
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Pages
+        run: |
+          mkdir -p docs/assets
+          cp -R dist/assets/. docs/assets/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./docs
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
