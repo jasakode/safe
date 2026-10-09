@@ -37,3 +37,4 @@ Download the native shared library for your operating system and architecture.
 
 
 **Note:** These libraries are native binaries. Download the version matching your operating system and CPU architecture. The C header files are provided for native integration.
+
