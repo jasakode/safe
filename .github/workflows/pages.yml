@@ -7,7 +7,7 @@ on:
     types:
       - completed
     branches:
-      - feature/exec
+      - main
 
 permissions:
   actions: read
