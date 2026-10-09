@@ -2,12 +2,12 @@
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
+    base: "/safe/",
     title: "Safe",
-    description:
-        "Secure cryptographic library for BIP-39, key derivation, encryption, and digital signatures.",
-
+    description: "Secure cryptographic library for BIP-39, key derivation, encryption, and digital signatures.",
     cleanUrls: true,
-
+    // Ignore dead-link warnings during build (e.g., links to native binaries not present in the site)
+    ignoreDeadLinks: true,
     themeConfig: {
         nav: [
             { text: "Guide", link: "/getting-started" },

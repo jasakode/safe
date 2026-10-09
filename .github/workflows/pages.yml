@@ -3,13 +3,12 @@ name: Pages
 on:
   workflow_run:
     workflows:
-    - Build
+      - Build
     branches:
-    - feature/exec
+      - feature/exec
     types:
-    - completed
+      - completed
   workflow_dispatch:
-
 
 permissions:
   contents: read
@@ -24,92 +23,103 @@ concurrency:
 jobs:
   deploy:
     name: Build Documentation
-    if: >-
-      github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
-    - name: Download Build Artifacts
-      if: github.event_name == 'workflow_run'
-      uses: actions/download-artifact@v4
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        run-id: ${{ github.event.workflow_run.id }}
-        pattern: '*'
-        path: artifacts
-        merge-multiple: false
+      - name: Download Build Artifacts
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: '*'
+          path: artifacts
+          merge-multiple: false
 
-    - name: Restore Build Outputs
-      if: github.event_name == 'workflow_run'
-      shell: bash
-      run: |
-        set -euo pipefail
+      - name: Download Latest Successful Build Artifacts
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          run_id="$(gh run list \
+            --repo "$REPOSITORY" \
+            --workflow Build \
+            --branch feature/exec \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
 
-        for target in \
-          darwin-amd64 \
-          darwin-arm64 \
-          linux-amd64 \
-          linux-arm64 \
-          windows-amd64 \
-          windows-arm64
-        do
-          test -d "artifacts/$target" || {
-            echo "Missing build artifact: $target"
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "No successful Build run found on feature/exec."
             exit 1
-          }
-        done
+          fi
 
-        for target in darwin linux windows; do
-          for arch in amd64 arm64; do
-            mkdir -p "packages/safe/bin/$target/$arch"
-            cp -R "artifacts/$target-$arch/." \
-              "packages/safe/bin/$target/$arch/"
+          mkdir -p artifacts
+          gh run download "$run_id" \
+            --repo "$REPOSITORY" \
+            --dir artifacts
+
+      - name: Restore Build Outputs
+        run: |
+          set -euo pipefail
+
+          for target in darwin-amd64 darwin-arm64 linux-amd64 linux-arm64 windows-amd64 windows-arm64; do
+            test -d "artifacts/$target" || { echo "Missing build artifact: $target"; exit 1; }
           done
-        done
 
-    - name: Prepare Public Binaries
-      if: github.event_name == 'workflow_run'
-      shell: bash
-      run: |
-        set -euo pipefail
-        mkdir -p packages/docs/public/bin
-        cp -R packages/safe/bin/. packages/docs/public/bin/
+          rm -rf packages/safe/bin
+          mkdir -p packages/safe/bin
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: 10
+          for target in darwin linux windows; do
+            for arch in amd64 arm64; do
+              mkdir -p "packages/safe/bin/$target/$arch"
+              cp -R "artifacts/$target-$arch/." "packages/safe/bin/$target/$arch/"
+            done
+          done
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 22
-        cache: pnpm
+      - name: Prepare Public Binaries
+        run: |
+          set -euo pipefail
+          rm -rf packages/docs/public/bin
+          mkdir -p packages/docs/public/bin
+          cp -R packages/safe/bin/. packages/docs/public/bin/
 
-    - name: Install Dependencies
-      run: pnpm install --frozen-lockfile
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
-    - name: Build VitePress
-      run: pnpm --dir packages/docs run build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
 
-    - name: Configure GitHub Pages
-      uses: actions/configure-pages@v5
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
 
-    - name: Upload Pages Artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: packages/docs/.vitepress/dist
+      - name: Build VitePress
+        run: pnpm --dir packages/docs run build
 
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/docs/.vitepress/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
