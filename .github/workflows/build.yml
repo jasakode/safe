@@ -4,7 +4,6 @@ on:
   push:
     branches:
     - feature/native-binary-publishing
-  workflow_dispatch:
 
 permissions:
   contents: write
