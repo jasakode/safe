@@ -80,7 +80,7 @@ jobs:
 
         go build \
           -buildmode=c-shared \
-          -o packages/safe/bin/linux/${GOARCH}/libbip0039.so \
+          -o packages/safe/bin/linux/${GOARCH}/safe.so \
           ./apps/share
 
     - name: Upload artifact
