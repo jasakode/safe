@@ -1,13 +1,14 @@
 name: Pages
 
 on:
+  workflow_dispatch: 
   workflow_run:
     workflows:
       - Build
     types:
       - completed
     branches:
-      - main
+      - feature/exec
 
 permissions:
   actions: read
