@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches:
-    - main
+    - feature/native-binary-publishing
   workflow_dispatch:
 
 permissions:
