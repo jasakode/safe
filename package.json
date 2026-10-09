@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
+    "safe:dev": "pnpm --filter @jasakode/safe run dev",
+    "safe:build": "pnpm --filter @jasakode/safe run build",
+    "safe:test": "pnpm --filter @jasakode/safe run test",
     "docs:dev": "pnpm --filter @jasakode/safe-docs run dev",
     "docs:build": "pnpm --filter @jasakode/safe-docs run build",
     "docs:preview": "pnpm --filter @jasakode/safe-docs run preview",
