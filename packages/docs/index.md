@@ -28,11 +28,11 @@ Download the native shared library for your operating system and architecture.
 
 | Platform | Architecture          | Binary                                                 | Header                                              |
 | -------- | --------------------- | ------------------------------------------------------ | --------------------------------------------------- |
-| macOS    | Intel (AMD64)         | [Download `.dylib`](../bin/darwin/amd64/safe.dylib) | [Download `.h`](../bin/darwin/amd64/safe.h)      |
-| macOS    | Apple Silicon (ARM64) | [Download `.dylib`](../bin/darwin/arm64/safe.dylib) | [Download `.h`](../bin/darwin/arm64/safe.h)      |
-| Linux    | AMD64                 | [Download `.so`](../bin/linux/amd64/safe.so)  | [Download `.h`](../bin/linux/amd64/safe.h) |
-| Linux    | ARM64                 | [Download `.so`](../bin/linux/arm64/safe.so)  | [Download `.h`](../bin/linux/arm64/safe.h) |
-| Windows  | AMD64                 | [Download `.dll`](../bin/windows/amd64/safe.dll)    | [Download `.h`](../bin/windows/amd64/safe.h)     |
-| Windows  | ARM64                 | [Download `.dll`](../bin/windows/arm64/safe.dll)    | [Download `.h`](../bin/windows/arm64/safe.h)     |
+| macOS    | Intel (AMD64)         | [Download `.dylib`](./bin/darwin/amd64/safe.dylib) | [Download `.h`](./bin/darwin/amd64/safe.h)      |
+| macOS    | Apple Silicon (ARM64) | [Download `.dylib`](./bin/darwin/arm64/safe.dylib) | [Download `.h`](./bin/darwin/arm64/safe.h)      |
+| Linux    | AMD64                 | [Download `.so`](./bin/linux/amd64/safe.so)  | [Download `.h`](./bin/linux/amd64/safe.h) |
+| Linux    | ARM64                 | [Download `.so`](./bin/linux/arm64/safe.so)  | [Download `.h`](./bin/linux/arm64/safe.h) |
+| Windows  | AMD64                 | [Download `.dll`](./bin/windows/amd64/safe.dll)    | [Download `.h`](./bin/windows/amd64/safe.h)     |
+| Windows  | ARM64                 | [Download `.dll`](./bin/windows/arm64/safe.dll)    | [Download `.h`](./bin/windows/arm64/safe.h)     |
 
 **Note:** These libraries are native binaries. Download the version matching your operating system and CPU architecture. The C header files are provided for native integration.
