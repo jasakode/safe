@@ -4,21 +4,30 @@ on:
   workflow_run:
     workflows:
     - Build
+    branches:
+    - feature/exec
     types:
     - completed
-    branches:
-    - feature/pages
+  workflow_dispatch:
+
 
 permissions:
-  actions: read
   contents: read
+  actions: read
   pages: write
   id-token: write
 
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    name: Build Documentation
+    if: >-
+      github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+
+    runs-on: ubuntu-24.04
 
     environment:
       name: github-pages
@@ -28,69 +37,79 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.workflow_run.head_sha }}
+        ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
-    - name: Download Darwin AMD64
-      uses: actions/download-artifact@v5
+    - name: Download Build Artifacts
+      if: github.event_name == 'workflow_run'
+      uses: actions/download-artifact@v4
       with:
-        name: darwin-amd64
-        path: packages/safe/bin/darwin/amd64
-        run-id: ${{ github.event.workflow_run.id }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Download Darwin ARM64
-      uses: actions/download-artifact@v5
-      with:
-        name: darwin-arm64
-        path: packages/safe/bin/darwin/arm64
         run-id: ${{ github.event.workflow_run.id }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        pattern: '*'
+        path: artifacts
+        merge-multiple: false
 
-    - name: Download Linux AMD64
-      uses: actions/download-artifact@v5
-      with:
-        name: linux-amd64
-        path: packages/safe/bin/linux/amd64
-        run-id: ${{ github.event.workflow_run.id }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Download Linux ARM64
-      uses: actions/download-artifact@v5
-      with:
-        name: linux-arm64
-        path: packages/safe/bin/linux/arm64
-        run-id: ${{ github.event.workflow_run.id }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Download Windows AMD64
-      uses: actions/download-artifact@v5
-      with:
-        name: windows-amd64
-        path: packages/safe/bin/windows/amd64
-        run-id: ${{ github.event.workflow_run.id }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Download Windows ARM64
-      uses: actions/download-artifact@v5
-      with:
-        name: windows-arm64
-        path: packages/safe/bin/windows/arm64
-        run-id: ${{ github.event.workflow_run.id }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Prepare Pages
+    - name: Restore Build Outputs
+      if: github.event_name == 'workflow_run'
+      shell: bash
       run: |
-        mkdir -p packages/docs/public
-        cp -R packages/safe/bin/. packages/docs/public/
+        set -euo pipefail
 
-    - name: Setup Pages
+        for target in \
+          darwin-amd64 \
+          darwin-arm64 \
+          linux-amd64 \
+          linux-arm64 \
+          windows-amd64 \
+          windows-arm64
+        do
+          test -d "artifacts/$target" || {
+            echo "Missing build artifact: $target"
+            exit 1
+          }
+        done
+
+        for target in darwin linux windows; do
+          for arch in amd64 arm64; do
+            mkdir -p "packages/safe/bin/$target/$arch"
+            cp -R "artifacts/$target-$arch/." \
+              "packages/safe/bin/$target/$arch/"
+          done
+        done
+
+    - name: Prepare Public Binaries
+      if: github.event_name == 'workflow_run'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p packages/docs/public/bin
+        cp -R packages/safe/bin/. packages/docs/public/bin/
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+
+    - name: Install Dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Build VitePress
+      run: pnpm --dir packages/docs run build
+
+    - name: Configure GitHub Pages
       uses: actions/configure-pages@v5
 
-    - name: Upload Pages artifact
-      uses: actions/upload-pages-artifact@v4
+    - name: Upload Pages Artifact
+      uses: actions/upload-pages-artifact@v3
       with:
-        path: ./packages/docs
+        path: packages/docs/.vitepress/dist
 
-    - name: Deploy
+    - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
