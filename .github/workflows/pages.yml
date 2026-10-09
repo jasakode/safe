@@ -8,9 +8,9 @@ on:
       - completed
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
   pages: write
   id-token: write
@@ -27,74 +27,13 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # ----------------------------------------------------------------------
-      # Checkout the repository at the SHA that triggered the Build workflow
-      # ----------------------------------------------------------------------
+      # Checkout the latest commit on the branch (includes binaries
+      # pushed by the Build workflow's publish job)
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref }}
 
-      # ----------------------------------------------------------------------
-      # Download artefacts produced by the Build workflow
-      # ----------------------------------------------------------------------
-      - name: Download Darwin AMD64
-        if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: darwin-amd64
-          path: packages/docs/public/bin/darwin/amd64
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download Darwin ARM64
-        if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: darwin-arm64
-          path: packages/docs/public/bin/darwin/arm64
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download Linux AMD64
-        if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-amd64
-          path: packages/docs/public/bin/linux/amd64
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download Linux ARM64
-        if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-arm64
-          path: packages/docs/public/bin/linux/arm64
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download Windows AMD64
-        if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-amd64
-          path: packages/docs/public/bin/windows/amd64
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download Windows ARM64
-        if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-arm64
-          path: packages/docs/public/bin/windows/arm64
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # ----------------------------------------------------------------------
-      # Install dependencies and build the VitePress documentation
-      # ----------------------------------------------------------------------
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -110,12 +49,11 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      # VitePress automatically copies public/ into .vitepress/dist/
+      # so the binaries in packages/docs/public/bin/ become /bin/ in the site
       - name: Build VitePress
         run: pnpm --dir packages/docs run build
 
-      # ----------------------------------------------------------------------
-      # Deploy the site to GitHub Pages
-      # ----------------------------------------------------------------------
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 

@@ -6,6 +6,8 @@ on:
     - main
   workflow_dispatch:
 
+permissions:
+  contents: write
 
 jobs:
   darwin:
@@ -183,3 +185,63 @@ jobs:
       with:
         name: windows-${{ matrix.arch }}
         path: packages/safe/bin/windows/${{ matrix.arch }}/
+
+  # ------------------------------------------------------------------
+  # After all builds succeed, push binaries to packages/docs/public/bin
+  # so VitePress can serve them as static downloads on GitHub Pages.
+  # ------------------------------------------------------------------
+  publish:
+    name: Publish binaries to docs
+    needs: [darwin, linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download Darwin AMD64
+      uses: actions/download-artifact@v4
+      with:
+        name: darwin-amd64
+        path: packages/docs/public/bin/darwin/amd64
+
+    - name: Download Darwin ARM64
+      uses: actions/download-artifact@v4
+      with:
+        name: darwin-arm64
+        path: packages/docs/public/bin/darwin/arm64
+
+    - name: Download Linux AMD64
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-amd64
+        path: packages/docs/public/bin/linux/amd64
+
+    - name: Download Linux ARM64
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-arm64
+        path: packages/docs/public/bin/linux/arm64
+
+    - name: Download Windows AMD64
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-amd64
+        path: packages/docs/public/bin/windows/amd64
+
+    - name: Download Windows ARM64
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-arm64
+        path: packages/docs/public/bin/windows/arm64
+
+    - name: Commit and push binaries
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add packages/docs/public/bin/
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore: update native binaries"
+          git push
+        fi
