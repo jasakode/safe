@@ -1,7 +1,6 @@
 name: Pages
 
 on:
-  workflow_dispatch: 
   workflow_run:
     workflows:
       - Build
@@ -9,6 +8,7 @@ on:
       - completed
     branches:
       - feature/exec
+  workflow_dispatch: # temporary for manual testing; remove when satisfied
 
 permissions:
   actions: read
@@ -20,17 +20,13 @@ jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      # Download artefacts produced by the Build workflow
       - name: Download Darwin AMD64
         uses: actions/download-artifact@v5
         with:
@@ -79,6 +75,24 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Build the documentation from packages/docs
+      - name: Build Docs
+        run: |
+          mkdir -p docs
+          # Replace the line below with your actual documentation build command.
+          # Example: make -C packages docs
+          # For now we simply copy the source files as a placeholder.
+          cp -R packages/docs/* docs/
+          # Ensure an index.html exists (GitHub Pages requires it).
+          if [ ! -f docs/index.html ]; then
+            cat > docs/index.html <<'EOF'
+            <!DOCTYPE html>
+            <html lang="en"><head><meta charset="UTF-8"><title>Safe Docs</title></head>
+            <body><h1>Documentation placeholder</h1></body></html>
+            EOF
+          fi
+
+      # Combine artefacts and docs into the final folder served by Pages
       - name: Prepare Pages
         run: |
           mkdir -p docs/assets
